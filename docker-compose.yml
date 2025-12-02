@@ -1,0 +1,13 @@
+services:
+  # Назовем наш первый сервис "proxy" (это будет Nginx)
+  proxy:
+    image: nginx:latest       # Какой образ использовать
+    ports:
+      - "8090:80"             # Проброс порта (как -p 8090:80)
+    volumes:
+      - ./data:/usr/share/nginx/html # (Опционально) Монтируем папку data внутрь
+    restart: always           # Если упадет — поднимись сам
+
+  # (В будущем тут появится второй сервис: твой Python-код)
+  # core_engine:
+  #   build: .
