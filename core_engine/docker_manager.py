@@ -1,66 +1,58 @@
 import docker
 import time
+import os
 
-# 1. Подключаемся к Docker (он ищет настройки в окружении)
-# Это как "вставить ключ в зажигание"
 client = docker.from_env()
 
 
-def start_container(name, port):
+def start_container(name):
     """
-    Функция запускает новый контейнер с Nginx.
-    name: имя сайта (например, "site-anton")
-    port: на каком порту он будет доступен (например, 8091)
+    Запускает контейнер, используя НАСТОЯЩИЙ путь хоста.
     """
-    print(f"🚀 Запускаю контейнер {name} на порту {port}...")
+    # 1. Получаем путь к проекту на хосте из docker-compose
+    host_project_path = os.environ.get("REAL_PROJECT_PATH")
+
+    # Если переменной нет (запуск без докера), используем обычный путь
+    if not host_project_path:
+        host_project_path = os.getcwd()
+
+    # 2. Формируем путь, который понятен ГЛАВНОМУ Докеру
+    # Было: /app/user_data/name
+    # Стало: /home/anton/hosting-project/user_data/name
+    abs_path_on_host = os.path.join(host_project_path, "user_data", name)
+
+    domain = f"{name}.localhost"
+    print(f"🚀 Запускаю {domain}. Путь на хосте: {abs_path_on_host}")
 
     try:
-        # Это аналог команды: docker run -d -p 8091:80 --name site-anton nginx
         container = client.containers.run(
-            "nginx:latest",  # Какой образ (Image)
-            detach=True,  # Запустить в фоне (-d)
-            ports={"80/tcp": port},  # Проброс портов (-p)
-            name=name,  # Имя контейнера
+            "nginx:latest",
+            detach=True,
+            name=name,
+            network="hosting_net",
+            volumes={
+                # ВАЖНО: Используем путь хоста!
+                abs_path_on_host: {"bind": "/usr/share/nginx/html", "mode": "ro"}
+            },
+            labels={
+                "traefik.enable": "true",
+                f"traefik.http.routers.{name}.rule": f"Host(`{domain}`)",
+                f"traefik.http.routers.{name}.entrypoints": "web",
+            },
         )
-        print(f"✅ Успех! ID контейнера: {container.short_id}")
         return container
 
     except Exception as e:
-        print(f"🔥 Ошибка: {e}")
+        print(f"🔥 Ошибка Docker: {e}")
         return None
 
 
 def stop_container(name):
-    """
-    Находит контейнер по имени и удаляет его
-    """
-    print(f"💀 Уничтожаю контейнер {name}...")
+    # (Этот код остается без изменений - копировать старый)
+    print(f"💀 Удаляю {name}...")
     try:
-        # Ищем контейнер
         container = client.containers.get(name)
-        # Останавливаем
         container.stop()
-        # Удаляем
         container.remove()
-        print("✅ Контейнер удален.")
-    except docker.errors.NotFound:
-        print("🤷‍♂️ Контейнер не найден (уже удален?)")
     except Exception as e:
-        print(f"🔥 Ошибка при удалении: {e}")
-
-
-# --- Блок тестирования (выполняется, если запустить файл напрямую) ---
-if __name__ == "__main__":
-    TEST_NAME = "test_site_alpha"
-
-    # 1. Сначала почистим (вдруг остался старый мусор)
-    stop_container(TEST_NAME)
-
-    # 2. Запустим новый
-    start_container(TEST_NAME, 8095)
-
-    print("⏳ Ждем 10 секунд, чтобы ты успел проверить браузер...")
-    time.sleep(10)
-
-    # 3. Удалим за собой
-    stop_container(TEST_NAME)
+        print(f"Ошибка удаления: {e}")

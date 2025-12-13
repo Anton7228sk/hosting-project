@@ -1,0 +1,37 @@
+services:
+  # 1. Traefik - Главный шлюз
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik_proxy
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - hosting_net
+
+  # 2. Ваша Панель Управления
+  web_panel:
+    build: .
+    container_name: hosting_panel
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./user_data:/app/user_data
+    ports:
+      - "5000:5000"
+    networks:
+      - hosting_net
+    # ВАЖНО: environment должен быть с отступом (внутри web_panel)
+    environment:
+      - REAL_PROJECT_PATH=${PWD}
+
+networks:
+  hosting_net:
+    name: hosting_net
