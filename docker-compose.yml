@@ -1,5 +1,4 @@
 services:
-<<<<<<< HEAD
   # Назовем наш первый сервис "proxy" (это будет Nginx)
   proxy:
     image: nginx:latest       # Какой образ использовать
@@ -12,7 +11,6 @@ services:
   # (В будущем тут появится второй сервис: твой Python-код)
   # core_engine:
   #   build: .
-=======
   # 1. Traefik - Главный шлюз
   traefik:
     image: traefik:v2.10
@@ -49,4 +47,3 @@ services:
 networks:
   hosting_net:
     name: hosting_net
->>>>>>> 1d2aa18307d1f877a718e91868bebd33fc5d10a7
