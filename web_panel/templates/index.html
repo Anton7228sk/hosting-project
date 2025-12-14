@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Hosting Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <h1 class="mb-4">📦 Panel Zarządzania Hostingiem</h1>
+        
+        <div class="card p-4 shadow-sm mb-4">
+            <h5>Utwórz nową stronę</h5>
+            <form action="/create" method="POST" enctype="multipart/form-data" class="d-flex flex-column gap-2">
+                
+                <input type="text" name="site_name" class="form-control" placeholder="Nazwa (np. sklep)" required>
+                
+                <label class="form-label small text-muted">Załaduj stronę (.zip) lub zostaw puste</label>
+                <input type="file" name="html_file" class="form-control" accept=".zip">
+                
+                <button type="submit" class="btn btn-primary mt-2">Utwórz</button>
+            </form>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header">Twoje aktywne strony</div>
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Adres (Link)</th>
+                        <th>Status</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for site in sites %}
+                    <tr>
+                        <td><strong>{{ site.name }}</strong></td>
+                        <td>
+                            <a href="http://{{ site.domain }}" target="_blank" class="btn btn-sm btn-link">
+                                🔗 {{ site.domain }}
+                            </a>
+                        </td>
+                        <td><span class="badge bg-success">Działa</span></td>
+                        <td>
+                            <form action="/delete/{{ site.name }}" method="POST">
+                                <button class="btn btn-sm btn-danger">Usuń</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">Brak aktywnych stron. Utwórz pierwszą!</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
