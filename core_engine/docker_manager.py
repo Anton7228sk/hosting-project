@@ -6,47 +6,37 @@ client = docker.from_env()
 
 
 def create_isolated_network(name):
-    """Створює ізольовану мережу для сайту та підключає Traefik"""
+    """Tworzy izolowaną sieć dla strony i łączy z Traefik"""
     network_name = f"{name}_isolated"
     try:
-        # Перевіряємо чи існує мережа
         network = client.networks.get(network_name)
-        print(f"   🔄 Мережа {network_name} вже існує")
+        print(f"   🔄 Sieć {network_name} już istnieje")
     except docker.errors.NotFound:
-        # Створюємо нову ізольовану мережу
         network = client.networks.create(
             network_name,
             driver="bridge",
-            internal=False,  # False щоб мати доступ до інтернету
+            internal=False,
         )
-        print(f"   🆕 Створено мережу {network_name}")
+        print(f"   🆕 Utworzono sieć {network_name}")
     
-    # ВАЖЛИВО: Підключаємо Traefik до цієї мережі
+    # Połączenie Traefik z izolowaną siecią
     try:
         traefik = client.containers.get("traefik_proxy")
-        # Перевіряємо чи вже підключений
         networks = traefik.attrs['NetworkSettings']['Networks']
         if network_name not in networks:
             network.connect(traefik)
-            print(f"   🔗 Traefik підключено до {network_name}")
+            print(f"   🔗 Traefik podłączony do {network_name}")
     except docker.errors.APIError as e:
         if "already exists" not in str(e):
-            print(f"   ⚠️  Помилка підключення Traefik: {e}")
+            print(f"   ⚠️  Błąd połączenia Traefik: {e}")
     except Exception as e:
-        print(f"   ⚠️  Traefik недоступний: {e}")
+        print(f"   ⚠️  Traefik niedostępny: {e}")
     
     return network
 
 
 def start_container(name, cpu_limit=50, ram_limit_mb=512):
-    """
-    Запускає ізольований контейнер з лімітами ресурсів.
-    
-    Args:
-        name: Назва сайту/контейнера
-        cpu_limit: Відсоток CPU (0-100), default 50%
-        ram_limit_mb: Ліміт RAM у MB, default 512MB
-    """
+    """Uruchamia izolowany kontener z limitami zasobów"""
     host_project_path = os.environ.get("REAL_PROJECT_PATH")
     if not host_project_path:
         host_project_path = os.getcwd()
@@ -54,30 +44,27 @@ def start_container(name, cpu_limit=50, ram_limit_mb=512):
     abs_path_on_host = os.path.join(host_project_path, "user_data", name)
     domain = f"{name}.localhost"
     
-    # Створюємо ізольовану мережу
     network = create_isolated_network(name)
     
-    print(f"🚀 Запускаю {domain} (CPU: {cpu_limit}%, RAM: {ram_limit_mb}MB)")
-    print(f"   📁 Путь: {abs_path_on_host}")
-    print(f"   🔒 Мережа: {network.name} (ізольована)")
+    print(f"🚀 Uruchamiam {domain} (CPU: {cpu_limit}%, RAM: {ram_limit_mb}MB)")
+    print(f"   📁 Ścieżka: {abs_path_on_host}")
+    print(f"   🔒 Sieć: {network.name} (izolowana)")
 
     try:
         container = client.containers.run(
             "nginx:latest",
             detach=True,
             name=name,
-            network=network.name,  # Ізольована мережа
+            network=network.name,
             restart_policy={"Name": "always"},
-            # === ЛІМІТИ РЕСУРСІВ ===
-            cpu_quota=int(cpu_limit * 1000),  # CPU ліміт (50% = 50000)
-            cpu_period=100000,  # Базовий період
-            mem_limit=f"{ram_limit_mb}m",  # RAM ліміт
-            memswap_limit=f"{ram_limit_mb}m",  # Вимикаємо swap
-            # === БЕЗПЕКА ===
-            security_opt=["no-new-privileges:true"],  # Заборона підвищення привілеїв
-            read_only=False,  # nginx потребує запису в /var/cache
+            cpu_quota=int(cpu_limit * 1000),
+            cpu_period=100000,
+            mem_limit=f"{ram_limit_mb}m",
+            memswap_limit=f"{ram_limit_mb}m",
+            security_opt=["no-new-privileges:true"],
+            read_only=False,
             tmpfs={
-                '/var/cache/nginx': 'size=10M,mode=1777',  # Тимчасова FS для кешу
+                '/var/cache/nginx': 'size=10M,mode=1777',
                 '/var/run': 'size=1M,mode=1777'
             },
             volumes={
@@ -93,33 +80,32 @@ def start_container(name, cpu_limit=50, ram_limit_mb=512):
             },
         )
         
-        print(f"   ✅ Контейнер {name} запущено з повною ізоляцією")
-        print(f"   🔒 Мережа: {network.name} (тільки Traefik має доступ)")
+        print(f"   ✅ Kontener {name} uruchomiony z pełną izolacją")
+        print(f"   🔒 Sieć: {network.name} (tylko Traefik ma dostęp)")
         
         return container
 
     except Exception as e:
-        print(f"🔥 Помилка Docker: {e}")
+        print(f"🔥 Błąd Docker: {e}")
         return None
 
 
 def stop_container(name):
-    """Зупиняє контейнер і видаляє його ізольовану мережу"""
-    print(f"💀 Видаляю {name}...")
+    """Zatrzymuje kontener i usuwa jego izolowaną sieć"""
+    print(f"💀 Usuwam {name}...")
     
     try:
         container = client.containers.get(name)
         container.stop()
         container.remove()
         
-        # Видаляємо ізольовану мережу
         network_name = f"{name}_isolated"
         try:
             network = client.networks.get(network_name)
             network.remove()
-            print(f"   🗑️ Видалено мережу {network_name}")
+            print(f"   🗑️ Usunięto sieć {network_name}")
         except docker.errors.NotFound:
             pass
             
     except Exception as e:
-        print(f"Помилка видалення: {e}")
+        print(f"Błąd usuwania: {e}")
