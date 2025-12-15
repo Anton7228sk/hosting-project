@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Метрики - Hosting Panel</title>
+    <title>Metryki - Hosting Panel</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .metric-card { margin-bottom: 20px; }
@@ -14,10 +14,10 @@
 <body class="bg-light">
     <div class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>📊 Метрики використання ресурсів</h1>
+            <h1>📊 Metryki wykorzystania zasobów</h1>
             <div>
-                <a href="/" class="btn btn-secondary me-2">← Назад</a>
-                <button onclick="location.reload()" class="btn btn-primary">🔄 Оновити</button>
+                <a href="/" class="btn btn-secondary me-2">← Wstecz</a>
+                <button onclick="location.reload()" class="btn btn-primary">🔄 Odśwież</button>
             </div>
         </div>
 
@@ -30,7 +30,7 @@
                     <small class="float-end">
                         <span class="badge bg-light text-dark">{{ item.site.domain }}</span>
                         {% if item.metrics.status == 'running' %}
-                        <span class="badge bg-success">●  Працює</span>
+                        <span class="badge bg-success">● Działa</span>
                         {% else %}
                         <span class="badge bg-secondary">{{ item.metrics.status }}</span>
                         {% endif %}
@@ -39,13 +39,12 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <!-- CPU -->
                     <div class="col-md-3 mb-3">
                         <h6>💻 CPU</h6>
                         <div class="metric-value {% if item.alerts.cpu %}text-danger{% else %}text-success{% endif %}">
                             {{ item.metrics.cpu_percent }}%
                         </div>
-                        <small class="text-muted">Ліміт: {{ item.limits.cpu_limit }}%</small>
+                        <small class="text-muted">Limit: {{ item.limits.cpu_limit }}%</small>
                         <div class="progress mt-2">
                             <div class="progress-bar {% if item.alerts.cpu %}bg-danger{% else %}bg-success{% endif %}" 
                                  style="width: {{ [(item.metrics.cpu_percent / item.limits.cpu_limit * 100), 100] | min }}%">
@@ -54,13 +53,12 @@
                         </div>
                     </div>
 
-                    <!-- RAM -->
                     <div class="col-md-3 mb-3">
                         <h6>🧠 RAM</h6>
                         <div class="metric-value {% if item.alerts.ram %}text-danger{% else %}text-success{% endif %}">
                             {{ item.metrics.ram_usage_mb }} MB
                         </div>
-                        <small class="text-muted">Ліміт: {{ item.limits.ram_limit_mb }} MB</small>
+                        <small class="text-muted">Limit: {{ item.limits.ram_limit_mb }} MB</small>
                         <div class="progress mt-2">
                             <div class="progress-bar {% if item.alerts.ram %}bg-danger{% else %}bg-info{% endif %}" 
                                  style="width: {{ item.metrics.ram_percent }}%">
@@ -69,13 +67,12 @@
                         </div>
                     </div>
 
-                    <!-- Disk -->
                     <div class="col-md-3 mb-3">
-                        <h6>💾 Disk</h6>
+                        <h6>💾 Dysk</h6>
                         <div class="metric-value {% if item.alerts.disk %}text-danger{% else %}text-success{% endif %}">
                             {{ item.metrics.disk_usage_mb }} MB
                         </div>
-                        <small class="text-muted">Ліміт: {{ item.limits.disk_limit_mb }} MB</small>
+                        <small class="text-muted">Limit: {{ item.limits.disk_limit_mb }} MB</small>
                         <div class="progress mt-2">
                             <div class="progress-bar {% if item.alerts.disk %}bg-danger{% else %}bg-warning{% endif %}" 
                                  style="width: {{ [(item.metrics.disk_usage_mb / item.limits.disk_limit_mb * 100), 100] | min }}%">
@@ -84,16 +81,15 @@
                         </div>
                     </div>
 
-                    <!-- Network -->
                     <div class="col-md-3 mb-3">
-                        <h6>🌐 Network</h6>
+                        <h6>🌐 Sieć</h6>
                         <div class="metric-value text-info">
                             ↓ {{ item.metrics.network_rx_mb }} MB
                         </div>
                         <div class="metric-value text-warning">
                             ↑ {{ item.metrics.network_tx_mb }} MB
                         </div>
-                        <small class="text-muted">Ліміт: {{ item.limits.bandwidth_limit_mb }} MB</small>
+                        <small class="text-muted">Limit: {{ item.limits.bandwidth_limit_mb }} MB</small>
                     </div>
                 </div>
 

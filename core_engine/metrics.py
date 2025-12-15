@@ -1,23 +1,16 @@
-"""
-Модуль для збору метрик контейнерів через Docker API
-"""
+"""Moduł do zbierania metryk kontenerów przez Docker API."""
 import docker
 from web_panel import database
 
 
 def get_container_stats(container_name):
-    """
-    Отримує поточні метрики контейнера
-    Повертає: dict з CPU, RAM, Disk, Network
-    """
+    """Pobiera aktualne metryki kontenera."""
     try:
         client = docker.from_env()
         container = client.containers.get(container_name)
         
-        # Отримуємо статистику
         stats = container.stats(stream=False)
         
-        # CPU використання (відсотки)
         cpu_delta = stats['cpu_stats']['cpu_usage']['total_usage'] - \
                    stats['precpu_stats']['cpu_usage']['total_usage']
         system_delta = stats['cpu_stats']['system_cpu_usage'] - \
@@ -28,12 +21,10 @@ def get_container_stats(container_name):
         if system_delta > 0 and cpu_delta > 0:
             cpu_percent = (cpu_delta / system_delta) * cpu_count * 100.0
         
-        # RAM використання (MB)
         ram_usage_mb = stats['memory_stats']['usage'] / (1024 * 1024)
         ram_limit_mb = stats['memory_stats']['limit'] / (1024 * 1024)
         ram_percent = (ram_usage_mb / ram_limit_mb) * 100 if ram_limit_mb > 0 else 0
         
-        # Network (RX/TX в MB)
         networks = stats.get('networks', {})
         network_rx_mb = 0
         network_tx_mb = 0
@@ -41,8 +32,6 @@ def get_container_stats(container_name):
             network_rx_mb += interface['rx_bytes'] / (1024 * 1024)
             network_tx_mb += interface['tx_bytes'] / (1024 * 1024)
         
-        # Disk (складніше, використовуємо розмір контейнера)
-        # Для точного вимірювання потрібен додатковий аналіз
         disk_usage_mb = 0
         try:
             inspect = client.api.inspect_container(container_name)
@@ -62,15 +51,12 @@ def get_container_stats(container_name):
             'status': container.status
         }
     except Exception as e:
-        print(f"Помилка отримання метрик для {container_name}: {e}")
+        print(f"Błąd pobierania metryk dla {container_name}: {e}")
         return None
 
 
 def get_all_sites_metrics():
-    """
-    Отримує метрики для всіх сайтів з бази
-    Повертає список з метриками та лімітами
-    """
+    """Pobiera metryki dla wszystkich stron z bazy."""
     sites = database.get_all_sites()
     results = []
     
@@ -79,7 +65,6 @@ def get_all_sites_metrics():
         limits = database.get_resource_limits(site['id'])
         
         if metrics:
-            # Порівнюємо з лімітами
             cpu_over_limit = metrics['cpu_percent'] > limits['cpu_limit'] if limits else False
             ram_over_limit = metrics['ram_usage_mb'] > limits['ram_limit_mb'] if limits else False
             disk_over_limit = metrics['disk_usage_mb'] > limits['disk_limit_mb'] if limits else False

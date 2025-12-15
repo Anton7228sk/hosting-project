@@ -1,35 +1,25 @@
 import sqlite3
 import os
 
-# === ВИПРАВЛЕННЯ ШЛЯХУ ===
-# Встановлюємо шлях до бази даних в окремій папці (не в user_data)
 DB_PATH = '/app/database' 
 DB_NAME = os.path.join(DB_PATH, "hosting.db")
-# =========================
 
 
 def get_connection():
-    """Создает соединение с базой данных."""
-    # Используем полный путь к файлу базы данных (DB_NAME)
+    """Tworzy połączenie z bazą danych."""
     conn = sqlite3.connect(DB_NAME)
-    # Это чтобы получать результаты как словари (dict), а не цифры
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db():
-    """
-    Создает таблицы, если их нет.
-    Именно эта функция создает файл hosting.db!
-    """
-    # Гарантируем, что папка существует перед попыткой создания базы данных.
+    """Tworzy tabele jeśli nie istnieją."""
     if not os.path.exists(DB_PATH):
         os.makedirs(DB_PATH)
         
     conn = get_connection()
     cursor = conn.cursor()
 
-    # 1. Таблица users (клиенты)
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
@@ -44,7 +34,6 @@ def init_db():
         """
     )
 
-    # 2. Таблица sites (сайты)
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS sites (
@@ -61,7 +50,6 @@ def init_db():
         """
     )
 
-    # 3. Таблица resource_limits (обмеження ресурсів)
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS resource_limits (
@@ -76,7 +64,6 @@ def init_db():
         """
     )
 
-    # 4. Таблица backups (резервні копії)
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS backups (
@@ -90,7 +77,6 @@ def init_db():
         """
     )
 
-    # 5. Таблица site_types (типи хостингу)
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS site_types (
@@ -102,7 +88,6 @@ def init_db():
         """
     )
 
-    # Додаємо типи хостингу за замовчуванням
     site_types_data = [
         ('static', 'Static HTML/CSS/JS hosting', 'nginx:alpine'),
         ('php', 'PHP hosting with Apache', 'php:8.2-apache'),
@@ -118,11 +103,11 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print("✅ База данных инициализирована (hosting.db) с расширенной схемой")
+    print("✅ Baza danych zainicjowana (hosting.db)")
 
 
 def add_site(name, container_id, domain, user_id=None, site_type='static'):
-    """Добавляет новый сайт в базу."""
+    """Dodaje nową stronę do bazy."""
     conn = get_connection()
     try:
         cursor = conn.execute(
@@ -131,20 +116,17 @@ def add_site(name, container_id, domain, user_id=None, site_type='static'):
         )
         conn.commit()
         site_id = cursor.lastrowid
-        
-        # Автоматически создаем стандартные лимиты для нового сайта
         set_resource_limits(site_id)
-        
         return site_id
     except sqlite3.IntegrityError:
-        print(f"⚠️ Сайт {name} уже есть в базе")
+        print(f"⚠️ Strona {name} już istnieje w bazie")
         return None
     finally:
         conn.close()
 
 
 def get_all_sites():
-    """Возвращает список всех сайтов."""
+    """Zwraca listę wszystkich stron."""
     conn = get_connection()
     sites = conn.execute("SELECT * FROM sites").fetchall()
     conn.close()
@@ -152,17 +134,15 @@ def get_all_sites():
 
 
 def remove_site(name):
-    """Удаляет сайт из базы по имени."""
+    """Usuwa stronę z bazy."""
     conn = get_connection()
     conn.execute("DELETE FROM sites WHERE name = ?", (name,))
     conn.commit()
     conn.close()
 
 
-# ========== ФУНКЦИИ ДЛЯ РАБОТЫ С USERS ==========
-
 def create_user(email, password_hash, name=None, plan='free'):
-    """Создает нового пользователя."""
+    """Tworzy nowego użytkownika."""
     conn = get_connection()
     try:
         cursor = conn.execute(
@@ -172,14 +152,14 @@ def create_user(email, password_hash, name=None, plan='free'):
         conn.commit()
         return cursor.lastrowid
     except sqlite3.IntegrityError:
-        print(f"⚠️ Пользователь с email {email} уже существует")
+        print(f"⚠️ Użytkownik z email {email} już istnieje")
         return None
     finally:
         conn.close()
 
 
 def get_user(user_id=None, email=None):
-    """Получает пользователя по ID или email."""
+    """Pobiera użytkownika po ID lub email."""
     conn = get_connection()
     if user_id:
         user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
@@ -192,7 +172,7 @@ def get_user(user_id=None, email=None):
 
 
 def get_all_users():
-    """Возвращает список всех пользователей."""
+    """Zwraca listę wszystkich użytkowników."""
     conn = get_connection()
     users = conn.execute("SELECT * FROM users").fetchall()
     conn.close()
@@ -200,7 +180,7 @@ def get_all_users():
 
 
 def update_user(user_id, **kwargs):
-    """Обновляет данные пользователя."""
+    """Aktualizuje dane użytkownika."""
     conn = get_connection()
     allowed_fields = ['email', 'name', 'plan', 'status']
     updates = []
@@ -220,17 +200,15 @@ def update_user(user_id, **kwargs):
 
 
 def delete_user(user_id):
-    """Удаляет пользователя."""
+    """Usuwa użytkownika."""
     conn = get_connection()
     conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
     conn.commit()
     conn.close()
 
 
-# ========== ФУНКЦИИ ДЛЯ РАБОТЫ С RESOURCE LIMITS ==========
-
 def set_resource_limits(site_id, cpu_limit=50, ram_limit_mb=512, disk_limit_mb=1024, bandwidth_limit_mb=10240):
-    """Устанавливает ограничения ресурсов для сайта."""
+    """Ustawia limity zasobów dla strony."""
     conn = get_connection()
     try:
         conn.execute(
@@ -251,17 +229,15 @@ def set_resource_limits(site_id, cpu_limit=50, ram_limit_mb=512, disk_limit_mb=1
 
 
 def get_resource_limits(site_id):
-    """Получает ограничения ресурсов для сайта."""
+    """Pobiera limity zasobów dla strony."""
     conn = get_connection()
     limits = conn.execute("SELECT * FROM resource_limits WHERE site_id = ?", (site_id,)).fetchone()
     conn.close()
     return limits
 
 
-# ========== ФУНКЦИИ ДЛЯ РАБОТЫ С BACKUPS ==========
-
 def create_backup(site_id, backup_path, size_mb=0):
-    """Создает запись о резервной копии."""
+    """Tworzy wpis o kopii zapasowej."""
     conn = get_connection()
     cursor = conn.execute(
         "INSERT INTO backups (site_id, backup_path, size_mb) VALUES (?, ?, ?)",
@@ -274,7 +250,7 @@ def create_backup(site_id, backup_path, size_mb=0):
 
 
 def list_backups(site_id=None):
-    """Возвращает список резервных копий."""
+    """Zwraca listę kopii zapasowych."""
     conn = get_connection()
     if site_id:
         backups = conn.execute("SELECT * FROM backups WHERE site_id = ? ORDER BY created_at DESC", (site_id,)).fetchall()
@@ -285,17 +261,15 @@ def list_backups(site_id=None):
 
 
 def delete_backup(backup_id):
-    """Удаляет запись о резервной копии."""
+    """Usuwa wpis o kopii zapasowej."""
     conn = get_connection()
     conn.execute("DELETE FROM backups WHERE id = ?", (backup_id,))
     conn.commit()
     conn.close()
 
 
-# ========== ФУНКЦИИ ДЛЯ РАБОТЫ С SITE TYPES ==========
-
 def get_site_types():
-    """Возвращает все доступные типы хостинга."""
+    """Zwraca wszystkie dostępne typy hostingu."""
     conn = get_connection()
     types = conn.execute("SELECT * FROM site_types").fetchall()
     conn.close()
@@ -303,7 +277,7 @@ def get_site_types():
 
 
 def get_site_type(name):
-    """Получает информацию о типе хостинга."""
+    """Pobiera informacje o typie hostingu."""
     conn = get_connection()
     site_type = conn.execute("SELECT * FROM site_types WHERE name = ?", (name,)).fetchone()
     conn.close()
