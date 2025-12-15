@@ -24,13 +24,13 @@ def init_db():
     # Создаем таблицу sites
     cursor.execute(
         """
-        CREATE TABLE IF NOT EXISTS sites (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            container_id TEXT NOT NULL,
-            domain TEXT NOT NULL
-        )
-    """
+    CREATE TABLE IF NOT EXISTS sites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      container_id TEXT NOT NULL,
+      domain TEXT NOT NULL
+    )
+  """
     )
 
     conn.commit()

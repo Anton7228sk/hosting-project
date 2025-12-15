@@ -18,6 +18,28 @@ if not os.path.exists(USER_DATA_DIR):
 database.init_db()
 
 
+def restore_containers():
+    """Восстанавливает контейнеры, которые были активны до перезагрузки."""
+    sites = database.get_all_sites()
+    print(f"🔄 Попытка восстановить {len(sites)} контейнеров...")
+    for site in sites:
+        try:
+            # Используем новую функцию is_container_running
+            if not docker_manager.is_container_running(site["name"]):
+                docker_manager.start_container(site["name"])
+                print(f"✅ Восстановлен: {site['name']}")
+            else:
+                print(f"⏩ Контейнер {site['name']} уже запущен.")
+        except Exception as e:
+            # Это может произойти, если папка с данными была удалена вручную
+            print(f"❌ Ошибка при восстановлении {site['name']}: {e}")
+
+
+# Вызов функции при старте приложения
+restore_containers()
+# --- КОНЕЦ ВОССТАНОВЛЕНИЯ ---
+
+
 @app.route("/")
 def index():
     sites = database.get_all_sites()

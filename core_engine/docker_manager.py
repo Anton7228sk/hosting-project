@@ -36,8 +36,13 @@ def start_container(name):
             },
             labels={
                 "traefik.enable": "true",
+                # HTTP Router (редирект на HTTPS)
+                f"traefik.http.routers.{name}-http.rule": f"Host(`{domain}`)",
+                f"traefik.http.routers.{name}-http.entrypoints": "web",
+                # HTTPS Router (защищенный)
                 f"traefik.http.routers.{name}.rule": f"Host(`{domain}`)",
-                f"traefik.http.routers.{name}.entrypoints": "web",
+                f"traefik.http.routers.{name}.entrypoints": "websecure",
+                f"traefik.http.routers.{name}.tls.certresolver": "le",
             },
         )
         return container
@@ -56,3 +61,15 @@ def stop_container(name):
         container.remove()
     except Exception as e:
         print(f"Ошибка удаления: {e}")
+
+
+def is_container_running(name):
+    """Проверяет, запущен ли контейнер с данным именем."""
+    try:
+        container = client.containers.get(name)
+        return container.status == "running"
+    except docker.errors.NotFound:
+        return False
+    except Exception:
+        # Ловит ошибки, если Docker недоступен или другие проблемы
+        return False

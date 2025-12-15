@@ -1,18 +1,37 @@
 services:
-  # 1. Traefik - Главный шлюз
+  # 1. Traefik - Главный шлюз (с поддержкой HTTPS)
   traefik:
     image: traefik:v2.10
     container_name: traefik_proxy
     command:
+      # --- Базовые настройки ---
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
+      
+      # --- 1. ВХОДНЫЕ ТОЧКИ (PORTS) ---
+      - "--entrypoints.web.address=:80"     # HTTP
+      - "--entrypoints.websecure.address=:443" # HTTPS
+      
+      # --- 2. НАСТРОЙКА LET'S ENCRYPT ---
+      - "--certificatesresolvers.le.acme.email=shkrebela.a@gmail.com" # <--- УКАЖИ СВОЙ EMAIL
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.tlschallenge=true" 
+      
+      # --- 3. РЕДИРЕКТ HTTP НА HTTPS ---
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      
     ports:
       - "80:80"
+      - "443:443" # Открываем порт 443
       - "8080:8080"
+      
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt # Папка для хранения сертификатов Traefik
+
+      
     networks:
       - hosting_net
 
@@ -24,11 +43,12 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./user_data:/app/user_data
+      - ./hosting.db:/app/hosting.db
     ports:
       - "5000:5000"
     networks:
       - hosting_net
-    # ВАЖНО: environment должен быть с отступом (внутри web_panel)
+    # 👇 ТЕПЕРЬ СЕКЦИЯ ENVIRONMENT С ПРАВИЛЬНЫМ ОТСТУПОМ
     environment:
       - REAL_PROJECT_PATH=${PWD}
 
