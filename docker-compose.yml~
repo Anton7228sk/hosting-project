@@ -1,0 +1,21 @@
+services:
+  # 1. Nginx proxy
+  proxy:
+    image: nginx:latest
+    ports:
+      - "8090:80"
+    volumes:
+      - ./data:/usr/share/nginx/html
+    restart: always
+    depends_on:
+      - web_panel
+
+  # 2. Ваш Python-сервіс (Web Panel)
+  web_panel:
+    build:
+      context: ./web_panel
+      dockerfile: Dockerfile
+    volumes:
+      - ./web_panel:/app
+    expose:
+      - "8000"

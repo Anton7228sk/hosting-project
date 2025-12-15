@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Метрики - Hosting Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .metric-card { margin-bottom: 20px; }
+        .progress { height: 25px; font-size: 14px; }
+        .alert-danger { border-left: 4px solid #dc3545; }
+        .metric-value { font-size: 1.2em; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>📊 Метрики використання ресурсів</h1>
+            <div>
+                <a href="/" class="btn btn-secondary me-2">← Назад</a>
+                <button onclick="location.reload()" class="btn btn-primary">🔄 Оновити</button>
+            </div>
+        </div>
+
+        {% if sites_metrics %}
+        {% for item in sites_metrics %}
+        <div class="card metric-card {% if item.alerts.cpu or item.alerts.ram or item.alerts.disk %}border-danger{% endif %}">
+            <div class="card-header {% if item.alerts.cpu or item.alerts.ram or item.alerts.disk %}bg-danger text-white{% else %}bg-primary text-white{% endif %}">
+                <h5 class="mb-0">
+                    🌐 {{ item.site.name }} 
+                    <small class="float-end">
+                        <span class="badge bg-light text-dark">{{ item.site.domain }}</span>
+                        {% if item.metrics.status == 'running' %}
+                        <span class="badge bg-success">●  Працює</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ item.metrics.status }}</span>
+                        {% endif %}
+                    </small>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- CPU -->
+                    <div class="col-md-3 mb-3">
+                        <h6>💻 CPU</h6>
+                        <div class="metric-value {% if item.alerts.cpu %}text-danger{% else %}text-success{% endif %}">
+                            {{ item.metrics.cpu_percent }}%
+                        </div>
+                        <small class="text-muted">Ліміт: {{ item.limits.cpu_limit }}%</small>
+                        <div class="progress mt-2">
+                            <div class="progress-bar {% if item.alerts.cpu %}bg-danger{% else %}bg-success{% endif %}" 
+                                 style="width: {{ [(item.metrics.cpu_percent / item.limits.cpu_limit * 100), 100] | min }}%">
+                                {{ "%.0f"|format(item.metrics.cpu_percent / item.limits.cpu_limit * 100) }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RAM -->
+                    <div class="col-md-3 mb-3">
+                        <h6>🧠 RAM</h6>
+                        <div class="metric-value {% if item.alerts.ram %}text-danger{% else %}text-success{% endif %}">
+                            {{ item.metrics.ram_usage_mb }} MB
+                        </div>
+                        <small class="text-muted">Ліміт: {{ item.limits.ram_limit_mb }} MB</small>
+                        <div class="progress mt-2">
+                            <div class="progress-bar {% if item.alerts.ram %}bg-danger{% else %}bg-info{% endif %}" 
+                                 style="width: {{ item.metrics.ram_percent }}%">
+                                {{ "%.0f"|format(item.metrics.ram_percent) }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Disk -->
+                    <div class="col-md-3 mb-3">
+                        <h6>💾 Disk</h6>
+                        <div class="metric-value {% if item.alerts.disk %}text-danger{% else %}text-success{% endif %}">
+                            {{ item.metrics.disk_usage_mb }} MB
+                        </div>
+                        <small class="text-muted">Ліміт: {{ item.limits.disk_limit_mb }} MB</small>
+                        <div class="progress mt-2">
+                            <div class="progress-bar {% if item.alerts.disk %}bg-danger{% else %}bg-warning{% endif %}" 
+                                 style="width: {{ [(item.metrics.disk_usage_mb / item.limits.disk_limit_mb * 100), 100] | min }}%">
+                                {{ "%.0f"|format(item.metrics.disk_usage_mb / item.limits.disk_limit_mb * 100) }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Network -->
+                    <div class="col-md-3 mb-3">
+                        <h6>🌐 Network</h6>
+                        <div class="metric-value text-info">
+                            ↓ {{ item.metrics.network_rx_mb }} MB
+                        </div>
+                        <div class="metric-value text-warning">
+                            ↑ {{ item.metrics.network_tx_mb }} MB
+                        </div>
+                        <small class="text-muted">Ліміт: {{ item.limits.bandwidth_limit_mb }} MB</small>
+                    </div>
+                </div>
+
+                {% if item.alerts.cpu or item.alerts.ram or item.alerts.disk %}
+                <div class="alert alert-danger mb-0">
+                    <strong>⚠️ Увага!</strong> Перевищено ліміти:
+                    {% if item.alerts.cpu %}<span class="badge bg-danger">CPU</span>{% endif %}
+                    {% if item.alerts.ram %}<span class="badge bg-danger">RAM</span>{% endif %}
+                    {% if item.alerts.disk %}<span class="badge bg-danger">Disk</span>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="alert alert-info text-center">
+            <h5>Немає активних сайтів для моніторингу</h5>
+            <p>Створіть сайт на <a href="/">головній сторінці</a></p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Автооновлення кожні 5 секунд
+        setTimeout(function(){ location.reload(); }, 5000);
+    </script>
+</body>
+</html>

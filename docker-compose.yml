@@ -1,49 +1,54 @@
-services:
-  # Назовем наш первый сервис "proxy" (это будет Nginx)
-  proxy:
-    image: nginx:latest       # Какой образ использовать
-    ports:
-      - "8090:80"             # Проброс порта (как -p 8090:80)
-    volumes:
-      - ./data:/usr/share/nginx/html # (Опционально) Монтируем папку data внутрь
-    restart: always           # Если упадет — поднимись сам
+version: '3.8'
 
-  # (В будущем тут появится второй сервис: твой Python-код)
-  # core_engine:
-  #   build: .
-  # 1. Traefik - Главный шлюз
+services:
+  # 1. Traefik - Головний шлюз
   traefik:
-    image: traefik:v2.10
+    image: traefik:latest
     container_name: traefik_proxy
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
+    environment:
+      - DOCKER_API_VERSION=1.44
     ports:
-      - "80:80"
-      - "8080:8080"
+      - "80:80"       # HTTP
+      - "8080:8080"   # Dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
-      - hosting_net
+      - default
 
-  # 2. Ваша Панель Управления
+  # 2. Ваша Панель Управління (Python-код)
   web_panel:
-    build: .
+    build:
+      # ЗМІНА 1: Контекст - корінь проекту, де знаходиться Dockerfile
+      context: . 
+      dockerfile: Dockerfile 
     container_name: hosting_panel
     restart: always
     volumes:
+      # ВАЖЛИВО: Монтуємо docker.sock для роботи Docker Manager
       - /var/run/docker.sock:/var/run/docker.sock
       - ./user_data:/app/user_data
-    ports:
-      - "5000:5000"
+      - ./database:/app/database
+      - ./web_panel:/app/web_panel
+      - ./core_engine:/app/core_engine
+    # ПОРТ 5000 ТУТ НЕ ПОТРІБЕН, ОСКІЛЬКИ ЙОГО ПРОКСУЄ TRAEFIK!
+    expose:
+      - "5000" # Вказуємо, що порт 5000 використовується ВНУТРІШНЬО
     networks:
-      - hosting_net
-    # ВАЖНО: environment должен быть с отступом (внутри web_panel)
+      - default # Використовуємо мережу за замовчуванням
     environment:
       - REAL_PROJECT_PATH=${PWD}
+    # === МІТКИ ДЛЯ TRAEFIK ===
+    labels:
+      - "traefik.enable=true"
+      # Тільки HTTP для панелі управління
+      - "traefik.http.routers.webpanel.rule=Host(`localhost`)"
+      - "traefik.http.routers.webpanel.entrypoints=web"
+      - "traefik.http.services.webpanel.loadbalancer.server.port=5000"
 
-networks:
-  hosting_net:
-    name: hosting_net
+# НЕ ВИКОРИСТОВУЄМО ЯВНО ВИЗНАЧЕНУ МЕРЕЖУ, ДЛЯ УНИКНЕННЯ КОНФЛІКТІВ
+# Docker Compose створить мережу за замовчуванням: hosting-project_default
